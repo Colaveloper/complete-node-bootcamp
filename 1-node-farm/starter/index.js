@@ -1,6 +1,7 @@
 const fs = require('fs');
 const http = require('http');
 const url = require('url');
+const replaceTemplate = require('./modules/replaceTemplate');
 
 // //Blocking syncrounous way
 // const textIn = fs.readFileSync('./txt/input.txt', 'utf-8')
@@ -26,22 +27,41 @@ const url = require('url');
 
 // blocking code executed only once at the beginning, 
 // which reads the json and saves it in a const
+const tempOverview = fs.readFileSync('./templates/template-overview.html', 'utf8');
+const tempCard = fs.readFileSync('./templates/template-card.html', 'utf8');
+const tempProduct = fs.readFileSync('./templates/template-product.html', 'utf8');
+
 const data = fs.readFileSync('./dev-data/data.json', 'utf8');
-const productData = JSON.parse(data);
-
-
+const dataObj = JSON.parse(data); //array of products
 
 const server = http.createServer(function (req, res) {
 
-    const pathName = req.url
+    var { query, pathname } = url.parse(req.url, true)
 
-    if (pathName == '/' || pathName == '/overview') {
-        res.end('This is the overview');
-    } else if (pathName == '/product') {
-        res.end('This is the product');
-    } else if (pathName == '/api') {
+
+    // Overview page
+    if (pathname == '/' || pathname == '/overview') {
+        res.writeHead(404, { 'content-type': 'text/html' });
+
+        const cardsHtml = dataObj.map(el => replaceTemplate(tempCard, el)).join('')
+        const output = tempOverview.replace('{%PRODUCT_CARDS%}', cardsHtml)
+
+        res.end(output);
+
+        // Product page
+    } else if (pathname == '/product') {
+        res.writeHead(404, { 'content-type': 'text/html' });
+
+        const product = dataObj[query.id]
+        const output = replaceTemplate(tempProduct, product)
+        res.end(output);
+
+        // API
+    } else if (pathname == '/api') {
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(data)
+
+        // 404
     } else {
         res.writeHead(404, { 'content-type': 'text/html', 'my-header': 'my-data' });
         res.end('<h1>Page not found</h1>');
